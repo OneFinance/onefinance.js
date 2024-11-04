@@ -1,0 +1,115 @@
+#!/usr/bin/env node
+
+import Fs from "node:fs/promises";
+import Path from "node:path";
+import Os from "node:os";
+
+import One from "onefinance";
+import OneFs from "onefinance/onefinance-fs.js";
+
+let url = new URL(import.meta.url);
+let __dirname = Path.dirname(url.pathname);
+
+let numberFmt = new Intl.NumberFormat("en-US");
+
+async function main() {
+    await OneFs.init();
+    let pockets = await OneFs.pockets();
+
+    let pocketName = process.argv[2] || "";
+    if (!pocketName) {
+        showPockets(pockets);
+        console.info(``);
+        console.info(
+            `one-transactions - outputs transactions for a pocket as a tab-separated CSV`
+        );
+        console.info(``);
+        console.info(`USAGE`);
+        console.info(`    one-transactions <pocket-name|pocket-last-4>`);
+        console.info(``);
+        console.info(`EXAMPLES`);
+        console.info(`    one-transactions 'Savings'`);
+        console.info(`    one-transactions '1234'`);
+        console.info(``);
+        return;
+    }
+
+    let pocket;
+    for (let p of pockets) {
+        if (p.name === pocketName) {
+            if (pocket) {
+                let msg = `more than one match for name '${pocketName}'`;
+                console.error(msg);
+                process.exit(1);
+                return;
+            }
+            pocket = p;
+        }
+
+        let lastFour = p.account_number.slice(-4);
+        if (lastFour === pocketName) {
+            if (pocket) {
+                let msg = `more than one match for last four '${pocketName}'`;
+                console.error(msg);
+                process.exit(1);
+                return;
+            }
+            pocket = p;
+        }
+    }
+    if (!pocket) {
+        let msg = `not found: '${pocketName}' doesn't match any pocket names or last four`;
+        console.error(msg);
+        process.exit(1);
+        return;
+    }
+
+    let txs = await OneFs.transactions(pocket.pocket_id);
+
+    // for (let tx of txs) {
+    //     console.warn(tx);
+    // }
+
+    for (let tx of txs) {
+        let d = new Date(tx.date);
+        let amount = tx.amount;
+        if (tx.is_debit) {
+            amount = -amount;
+        }
+        let amountStr = numberFmt.format(amount);
+        let row = [
+            d.toLocaleDateString(),
+            d.toLocaleTimeString(),
+            tx.pocket_name,
+            tx.pocket_type,
+            amountStr,
+            tx.entry_name,
+            tx.client_display?.description || tx.description,
+            tx.note,
+        ];
+        let line = row.join("\t");
+        console.info(line);
+    }
+}
+
+function showPockets(pockets) {
+    let nameLen = 0;
+    let typeLen = 0;
+    for (let p of pockets) {
+        let balance = p.available_balance.toFixed(2);
+        balance = numberFmt.format(balance);
+        nameLen = Math.max(p.name.length, nameLen);
+        typeLen = Math.max(p.type.length, typeLen);
+    }
+    typeLen += 2;
+
+    for (let p of pockets) {
+        let name = p.name.padEnd(nameLen, " ");
+        let lastFour = p.account_number.slice(-4);
+        let type = `(${p.type})`.padStart(typeLen, " ");
+
+        console.info(`${lastFour} ${type} ${name}`);
+    }
+}
+
+main();

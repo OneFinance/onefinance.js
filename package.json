@@ -6,6 +6,7 @@
     "type": "module",
     "files": [
         "onefinance.js",
+        "onefinance-fs.js",
         "uuid.js"
     ],
     "exports": {
@@ -17,6 +18,7 @@
     },
     "bin": {
         "one-balances": "./bin/one-balances",
+        "one-transactions": "./bin/one-transactions",
         "one-jwt-check-ttl": "./bin/one-jwt-check-ttl",
         "one-jwt-set": "./bin/one-jwt-set"
     },

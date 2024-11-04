@@ -134,6 +134,59 @@ API.pockets = async function () {
     return pockets;
 };
 
+API.transactions = async function (pocketId, latestTrnId = "") {
+    let userId = API._userId();
+    let limit = 250; // default: 50, max: ???
+    let query = {
+        pocketId: pocketId,
+        userId: userId,
+        limit: limit,
+        include_pending_rdcs: true,
+        force_refresh: false,
+    };
+
+    let count = 1;
+    let transactions = [];
+    let next = "";
+    for (;;) {
+        if (next) {
+            Object.assign(query, {
+                next,
+            });
+        }
+
+        let queryParams = new URLSearchParams(query);
+        let search = queryParams.toString();
+        let url = `https://api.one.app/banking/pockets/${pocketId}/transaction/all?${search}`;
+        let resp = await API._request(url);
+        if (!resp.ok) {
+            let msg = await resp.text();
+            throw new Error(`list transactions failed: ${resp.status} ${msg}`);
+        }
+        let data = await resp.json();
+
+        for (let tx of data.transactions) {
+            if (tx.trn_id === latestTrnId) {
+                return transactions;
+            }
+            transactions.push(tx);
+        }
+        if (!data.next) {
+            return transactions;
+        }
+
+        let rnd = API._random(2000, 5000);
+        await API._sleep(rnd);
+        console.warn(
+            `DEBUG page ${count} (${limit} items per page), first tx: ${data.transactions[0].trn_id}`
+        );
+        count += 1;
+        next = data.next;
+    }
+
+    return transactions;
+};
+
 API.transfer = async function (originId, destinationId, amount) {
     let url = "https://api.one.app/banking/command";
 
@@ -178,6 +231,26 @@ API.transfer = async function (originId, destinationId, amount) {
     }
 
     // NO CONTENT
+};
+
+/**
+ * @param {Number} min
+ * @param {Number} max
+ */
+API._random = function (min, max) {
+    let range = max + -min + 1;
+    let rndF = Math.random();
+    let rndScaled = rndF * range;
+    let rndInt = Math.floor(rndScaled);
+    let minRnd = rndInt + min;
+    return minRnd;
+};
+
+/** @param {Number} ms */
+API._sleep = function (ms) {
+    return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+    });
 };
 
 export default API;
