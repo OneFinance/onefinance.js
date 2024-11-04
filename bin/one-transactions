@@ -34,6 +34,7 @@ async function main() {
         return;
     }
 
+    let selection = [];
     let pocket;
     for (let p of pockets) {
         if (p.name === pocketName) {
@@ -57,38 +58,49 @@ async function main() {
             pocket = p;
         }
     }
-    if (!pocket) {
+    if (pocket) {
+        selection.push(pocket);
+    } else if (pocketName === "--all") {
+        selection = pockets;
+    } else {
         let msg = `not found: '${pocketName}' doesn't match any pocket names or last four`;
         console.error(msg);
         process.exit(1);
         return;
     }
 
-    let txs = await OneFs.transactions(pocket.pocket_id);
+    for (let p of selection) {
+        let lastFour = p.account_number.slice(-4);
+        console.warn(`# Pocket ${p.name} (${lastFour})`);
+        let txs = await OneFs.transactions(p.pocket_id);
 
-    // for (let tx of txs) {
-    //     console.warn(tx);
-    // }
+        let rnd = One._random(1000, 2500);
+        await One._sleep(rnd);
 
-    for (let tx of txs) {
-        let d = new Date(tx.date);
-        let amount = tx.amount;
-        if (tx.is_debit) {
-            amount = -amount;
+        // for (let tx of txs) {
+        //     console.warn(tx);
+        // }
+
+        for (let tx of txs) {
+            let d = new Date(tx.date);
+            let amount = tx.amount;
+            if (tx.is_debit) {
+                amount = -amount;
+            }
+            let amountStr = numberFmt.format(amount);
+            let row = [
+                d.toLocaleDateString(),
+                d.toLocaleTimeString(),
+                tx.pocket_name,
+                tx.pocket_type,
+                amountStr,
+                tx.entry_name,
+                tx.client_display?.description || tx.description,
+                tx.note,
+            ];
+            let line = row.join("\t");
+            console.info(line);
         }
-        let amountStr = numberFmt.format(amount);
-        let row = [
-            d.toLocaleDateString(),
-            d.toLocaleTimeString(),
-            tx.pocket_name,
-            tx.pocket_type,
-            amountStr,
-            tx.entry_name,
-            tx.client_display?.description || tx.description,
-            tx.note,
-        ];
-        let line = row.join("\t");
-        console.info(line);
     }
 }
 
