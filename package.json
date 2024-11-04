@@ -18,6 +18,7 @@
     },
     "bin": {
         "one-balances": "./bin/one-balances",
+        "one-pockets": "./bin/one-pockets",
         "one-transactions": "./bin/one-transactions",
         "one-jwt-check-ttl": "./bin/one-jwt-check-ttl",
         "one-jwt-set": "./bin/one-jwt-set"

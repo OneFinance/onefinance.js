@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+import Fs from "node:fs/promises";
+import Path from "node:path";
+import Os from "node:os";
+
+import One from "onefinance";
+import OneFs from "onefinance/onefinance-fs.js";
+
+let url = new URL(import.meta.url);
+let __dirname = Path.dirname(url.pathname);
+
+let numberFmt = new Intl.NumberFormat("en-US");
+
+async function main() {
+    let ttl = await OneFs.init();
+
+    let pockets = await OneFs.pockets();
+
+    let balanceLen = 0;
+    let nameLen = 0;
+    let typeLen = 0;
+    for (let p of pockets) {
+        let balance = p.available_balance.toFixed(2);
+        balance = numberFmt.format(balance);
+        balanceLen = Math.max(balance.length, balanceLen);
+        nameLen = Math.max(p.name.length, nameLen);
+        typeLen = Math.max(p.type.length, typeLen);
+    }
+    typeLen += 2;
+    balanceLen += 1;
+
+    for (let p of pockets) {
+        let name = p.name.padEnd(nameLen, " ");
+        let lastFour = p.account_number.slice(-4);
+        let type = `(${p.type})`.padStart(typeLen, " ");
+
+        let balance = p.available_balance.toFixed(2);
+        balance = numberFmt.format(balance);
+        balance = `$${balance}`.padStart(balanceLen, " ");
+
+        let extraBalance = "";
+        if (p.balance !== p.available_balance) {
+            let pending = p.available_balance - p.balance;
+            extraBalance = ` (+ ${pending} pending)`;
+        }
+
+        console.info(`${name}  x${lastFour}  ${type}`);
+    }
+}
+
+main();
