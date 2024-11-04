@@ -130,7 +130,7 @@ API.pockets = async function () {
         throw new Error(`list pockets failed: ${resp.status} ${msg}`);
     }
 
-    let pockets = resp.json();
+    let pockets = await resp.json();
     return pockets;
 };
 
