@@ -2,27 +2,30 @@
 
 import Fs from "node:fs/promises";
 import Path from "node:path";
+import Os from "node:os";
 
-import API from "onefinance";
+import One from "onefinance";
+
+let HOME = Os.homedir();
 
 async function main() {
     let url = new URL(import.meta.url);
     let __dirname = Path.dirname(url.pathname);
 
     let jwt = await Fs.readFile(
-        `${process.env.HOME}/.config/onefinance/bearer.jwt`,
+        `${HOME}/.config/onefinance/bearer.jwt`,
         "utf8"
     );
     jwt = jwt.trim();
 
-    let ttl = await API.init(jwt).catch(function (err) {
+    let ttl = await One.init(jwt).catch(function (err) {
         console.error(err.message);
     });
     if (!ttl) {
         return;
     }
 
-    let duration = API._formatDuration(ttl);
+    let duration = One._formatDuration(ttl);
     console.info(`token will expire in ${duration}`);
 }
 

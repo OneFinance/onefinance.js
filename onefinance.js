@@ -7,38 +7,38 @@ import UUID from "onefinance/uuid.js";
 
 let fetch = globalThis.fetch;
 
-let API = {};
+let One = {};
 
-API._jwt = function () {
+One._jwt = function () {
     return "";
 };
 
-API._userId = function () {
+One._userId = function () {
     return "";
 };
 
-API.init = async function (jwt) {
-    API._jwt = function () {
+One.init = async function (jwt) {
+    One._jwt = function () {
         return jwt;
     };
 
-    let claims = API._parseJwt(jwt);
+    let claims = One._parseJwt(jwt);
     let now = Date.now();
-    let ttl = API._getJwtTtl(claims.exp, now);
+    let ttl = One._getJwtTtl(claims.exp, now);
     if (ttl <= 5) {
-        let duration = API._formatDuration(ttl);
+        let duration = One._formatDuration(ttl);
         throw new Error(`jwt expired ${duration} ago`);
     }
 
     let userId = claims["https://safecorp.com/safe_user_id"];
-    API._userId = function () {
+    One._userId = function () {
         return userId;
     };
 
     return ttl;
 };
 
-API._formatDuration = function (totalSeconds) {
+One._formatDuration = function (totalSeconds) {
     totalSeconds = Math.abs(totalSeconds);
 
     let hours = totalSeconds / 3600;
@@ -58,7 +58,7 @@ API._formatDuration = function (totalSeconds) {
     return `${hoursStr}h ${minutesStr}m ${secondsStr}s`;
 };
 
-API._parseJwt = function (token) {
+One._parseJwt = function (token) {
     let parts = token.split(".");
     let payload = parts[1];
 
@@ -81,7 +81,7 @@ API._parseJwt = function (token) {
     return data;
 };
 
-API._getJwtTtl = function (exp, now) {
+One._getJwtTtl = function (exp, now) {
     if (!now) {
         now = Date.now();
     }
@@ -94,10 +94,10 @@ API._getJwtTtl = function (exp, now) {
     return ttl;
 };
 
-API._request = async function (url, data) {
+One._request = async function (url, data) {
     let uuid = UUID.v4();
 
-    let jwt = API._jwt();
+    let jwt = One._jwt();
     let headers = {
         Authorization: `Bearer ${jwt}`,
         "X-Safe-Request-ID": uuid,
@@ -120,11 +120,11 @@ API._request = async function (url, data) {
     return resp;
 };
 
-API.pockets = async function () {
-    let userId = API._userId();
+One.pockets = async function () {
+    let userId = One._userId();
     let url = `https://api.one.app/banking/v2/pockets?user_id=${userId}`;
 
-    let resp = await API._request(url);
+    let resp = await One._request(url);
     if (!resp.ok) {
         let msg = await resp.text();
         throw new Error(`list pockets failed: ${resp.status} ${msg}`);
@@ -134,8 +134,8 @@ API.pockets = async function () {
     return pockets;
 };
 
-API.transactions = async function (pocketId, latestTrnId = "") {
-    let userId = API._userId();
+One.transactions = async function (pocketId, latestTrnId = "") {
+    let userId = One._userId();
     let limit = 250; // default: 50, max: ???
     let query = {
         pocketId: pocketId,
@@ -158,7 +158,7 @@ API.transactions = async function (pocketId, latestTrnId = "") {
         let queryParams = new URLSearchParams(query);
         let search = queryParams.toString();
         let url = `https://api.one.app/banking/pockets/${pocketId}/transaction/all?${search}`;
-        let resp = await API._request(url);
+        let resp = await One._request(url);
         if (!resp.ok) {
             let msg = await resp.text();
             throw new Error(`list transactions failed: ${resp.status} ${msg}`);
@@ -175,8 +175,8 @@ API.transactions = async function (pocketId, latestTrnId = "") {
             return transactions;
         }
 
-        let rnd = API._random(2000, 5000);
-        await API._sleep(rnd);
+        let rnd = One._random(2000, 5000);
+        await One._sleep(rnd);
         console.warn(
             `DEBUG page ${count} (${limit} items per page), first tx: ${data.transactions[0].trn_id}`
         );
@@ -187,7 +187,7 @@ API.transactions = async function (pocketId, latestTrnId = "") {
     return transactions;
 };
 
-API.transfer = async function (originId, destinationId, amount) {
+One.transfer = async function (originId, destinationId, amount) {
     let url = "https://api.one.app/banking/command";
 
     let originType = originId.replace(/\..*/, "");
@@ -224,7 +224,7 @@ API.transfer = async function (originId, destinationId, amount) {
         );
     }
 
-    let resp = await API._request(url, data);
+    let resp = await One._request(url, data);
     if (!resp.ok) {
         let msg = await resp.text();
         throw new Error(`transfer failed: ${resp.status} ${msg}`);
@@ -237,7 +237,7 @@ API.transfer = async function (originId, destinationId, amount) {
  * @param {Number} min
  * @param {Number} max
  */
-API._random = function (min, max) {
+One._random = function (min, max) {
     let range = max + -min + 1;
     let rndF = Math.random();
     let rndScaled = rndF * range;
@@ -247,10 +247,10 @@ API._random = function (min, max) {
 };
 
 /** @param {Number} ms */
-API._sleep = function (ms) {
+One._sleep = function (ms) {
     return new Promise(function (resolve) {
         setTimeout(resolve, ms);
     });
 };
 
-export default API;
+export default One;

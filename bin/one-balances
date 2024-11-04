@@ -2,24 +2,27 @@
 
 import Fs from "node:fs/promises";
 import Path from "node:path";
+import Os from "node:os";
 
-import API from "onefinance";
+import One from "onefinance";
+
+let url = new URL(import.meta.url);
+let __dirname = Path.dirname(url.pathname);
 
 let numberFmt = new Intl.NumberFormat("en-US");
 
 async function main() {
-    let url = new URL(import.meta.url);
-    let __dirname = Path.dirname(url.pathname);
+    let HOME = Os.homedir();
 
     let jwt = await Fs.readFile(
-        `${process.env.HOME}/.config/onefinance/bearer.jwt`,
+        `${HOME}/.config/onefinance/bearer.jwt`,
         "utf8"
     );
     jwt = jwt.trim();
 
-    let ttl = await API.init(jwt);
+    let ttl = await One.init(jwt);
 
-    let pockets = await API.pockets();
+    let pockets = await One.pockets();
 
     let balanceLen = 0;
     let nameLen = 0;
